@@ -64,10 +64,10 @@ jobs:
           # 2. Trigger the Git Pull
           # FIXED: Added the missing closing quote and used --data-urlencode for safety
           echo "📥 Sending Git Pull command to PythonAnywhere..."
-          curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
+          CONSOLE_RESPONSE=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
             -d "executable=bin/bash" \
-            -d "arguments=-c 'cd $SOURCE_DIR && git pull'"
+            -d "arguments=-c 'cd $SOURCE_DIR && git pull'")
           
           echo "⏳ Waiting 12 seconds for Git to sync files..."
           sleep 12
