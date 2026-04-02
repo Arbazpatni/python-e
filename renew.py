@@ -12,6 +12,7 @@ def renew_account(username, password):
     soup = BeautifulSoup(r.text, 'html.parser')
     csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
 
+    print('user: '+str(username)+' pass: '+str(password))
     # 2. Log In
     login_data = {
         'username': username,
