@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # STEP 1: Parse the variable to create the dynamic list
   setup:
     runs-on: ubuntu-latest
     outputs:
@@ -17,7 +16,6 @@ jobs:
       - id: set-matrix
         run: echo "matrix=${{ vars.ACCOUNTS_LIST }}" >> $GITHUB_OUTPUT
 
-  # STEP 2: Run for every account in that list
   manage_accounts:
     needs: setup
     runs-on: ubuntu-latest
@@ -30,20 +28,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-        - name: Hardcoded Secret Test
+      # THIS STEP WAS INDENTED WRONG - FIXED BELOW
+      - name: Hardcoded Secret Test
+        env:
+          TEST_USER: ${{ secrets.USER_1 }}
         run: |
           if [ -n "$TEST_USER" ]; then
             echo "✅ I can see USER_1 directly!"
           else
             echo "❌ I still cannot see USER_1 even when hardcoded."
           fi
-        env:
-          TEST_USER: ${{ secrets.USER_1 }}
 
-          # --- TASK 1: AUTO-RENEW (Clean Method) ---
+      # --- TASK 1: AUTO-RENEW ---
       - name: Auto-Renew Account ${{ matrix.account_index }}
         env:
-          # Change 'secrets' to 'vars'
           PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           PA_PASSWORD: ${{ secrets[format('PASS_{0}', matrix.account_index)] }}
         run: |
