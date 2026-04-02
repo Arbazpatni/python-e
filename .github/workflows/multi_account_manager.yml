@@ -63,7 +63,7 @@ jobs:
           # We use > sync.log to capture what happens
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
-            --data-urlencode "executable=bin/bash" \
+            --data-urlencode "executable=/bin/bash" \
             --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'"
           
           echo "⏳ Waiting 15s..."
