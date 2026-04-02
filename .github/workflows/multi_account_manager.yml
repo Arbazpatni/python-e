@@ -47,32 +47,32 @@ jobs:
         run: |
           pip install requests beautifulsoup4
           python renew.py
-          # --- TASK 2: AUTO-DEPLOY (Using v0 API) ---
-      - name: Reload Web App for Account ${{ matrix.account_index }}
+
+          # --- TASK 2: PULL & RELOAD ---
+      - name: Pull Code and Reload Account ${{ matrix.account_index }}
         env:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "❌ API Token for index ${{ matrix.account_index }} is missing. Skipping."
-            exit 0
-          fi
-
-          echo "Fetching Web App list for $USERNAME..."
-          # Fetch using v0
+          # 1. Fetch the domain and source directory
           RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/")
-          
-          # Extract the domain (sowmiyancloud3.pythonanywhere.com)
           DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
+          SOURCE_DIR=$(echo $RESPONSE | jq -r '.[0].source_directory')
 
-          if [ "$DOMAIN" == "null" ] || [ -z "$DOMAIN" ]; then
-            echo "❌ No Web App found for $USERNAME. Response: $RESPONSE"
-            exit 1
-          fi
+          echo "📂 Source Directory: $SOURCE_DIR"
 
+          # 2. Command PythonAnywhere to pull the latest code
+          # This creates a "Consoles" task to run git pull
+          echo "📥 Pulling latest code from GitHub..."
+          curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
+            -H "Authorization: Token $TOKEN" \
+            -d "executable=bin/bash" \
+            -d "arguments=-c 'cd $SOURCE_DIR && git pull'"
+
+          # 3. Wait 5 seconds for the pull to complete
+          sleep 5
+
+          # 4. Reload the web app
           echo "🚀 Reloading $DOMAIN..."
-          # Call the reload endpoint using v0
-          RELOAD_CONFIRM=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
-            -H "Authorization: Token $TOKEN")
-
-          echo "Server Response: $RELOAD_CONFIRM"
+          curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
+            -H "Authorization: Token $TOKEN"
