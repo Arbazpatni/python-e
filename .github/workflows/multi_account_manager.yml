@@ -54,7 +54,7 @@ jobs:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
         run:
-            if [ -z "$TOKEN" ]; then
+          if [ -z "$TOKEN" ]; then
             echo "❌ API Token for index ${{ matrix.account_index }} is missing. Skipping."
             exit 0
           fi
