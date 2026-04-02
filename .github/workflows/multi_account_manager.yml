@@ -69,11 +69,11 @@ jobs:
             -d "executable=bin/bash" \
             -d "arguments=-c 'cd $SOURCE_DIR && git pull'")
           
-          echo "⏳ Waiting 12 seconds for Git to sync files..."
-          sleep 12
-
           CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r '.id')
           echo "✅ Console started with ID: $CONSOLE_ID"
+
+          echo "⏳ Waiting 20 seconds for Git to sync files..."
+          sleep 20
 
           # 4. KILL the console to free up the slot
           if [ "$CONSOLE_ID" != "null" ]; then
