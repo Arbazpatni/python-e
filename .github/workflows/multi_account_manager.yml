@@ -48,41 +48,44 @@ jobs:
           pip install requests beautifulsoup4
           python renew.py
 
-          # --- TASK 2: PULL & RELOAD ---
-      - name: Pull Code and Reload Account ${{ matrix.account_index }}
+      - name: Sync, Kill Console, and Reload
         env:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
         run: |
-          # 1. Fetch the domain and source directory
+          # 1. Get Webapp Info
           RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/")
           DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
           SOURCE_DIR=$(echo $RESPONSE | jq -r '.[0].source_directory')
 
-          echo "📂 Source Directory: $SOURCE_DIR"
+          # 2. PRE-CLEANUP: Kill any lingering consoles to free up the 2 slots
+          echo "🧹 Clearing existing consoles..."
+          CURRENT_CONSOLES=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/")
+          echo $CURRENT_CONSOLES | jq -r '.[].id' | xargs -I {} curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/{}/" -H "Authorization: Token $TOKEN"
 
-          # 2. Trigger the Git Pull
-          # FIXED: Added the missing closing quote and used --data-urlencode for safety
-          echo "📥 Sending Git Pull command to PythonAnywhere..."
+          # 3. START NEW CONSOLE: Run the git pull
+          echo "📥 Starting Git Pull..."
           CONSOLE_RESPONSE=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
-            -d "executable=bin/bash" \
-            -d "arguments=-c 'cd ~/python-e && git pull && echo nice > nice'")
+            --data-urlencode "executable=bin/bash" \
+            --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git pull'")
           
-          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r '.id')
+          # Capture the ID correctly from the response
+          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
           echo "✅ Console started with ID: $CONSOLE_ID"
 
-          echo "⏳ Waiting 20 seconds for Git to sync files..."
+          # 4. WAIT: Give the pull time to finish
+          echo "⏳ Syncing files (20s)..."
           sleep 20
 
-          # 4. KILL the console to free up the slot
-          if [ "$CONSOLE_ID" != "null" ]; then
-            echo "🗑️ Closing console $CONSOLE_ID to free up slots..."
+          # 5. POST-CLEANUP: Kill the console we just used
+          if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
+            echo "🗑️ Closing console $CONSOLE_ID..."
             curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
               -H "Authorization: Token $TOKEN"
           fi
 
-          # 4. Reload the web app
-          echo "🚀 Reloading $DOMAIN..."
+          # 6. RELOAD: Restart the web server
+          echo "🚀 Restarting Web Server..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN"
