@@ -5,49 +5,48 @@ from bs4 import BeautifulSoup
 
 def renew_account(username, password):
     session = requests.Session()
+    # Use a real browser User-Agent to avoid being blocked as a bot
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    })
+
     login_url = 'https://www.pythonanywhere.com/login/'
     
-    # 1. Get CSRF Token
+    # 1. INITIAL GET: Grab the first CSRF token and cookies
     r = session.get(login_url)
     soup = BeautifulSoup(r.text, 'html.parser')
     csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
 
-    print('user: '+str(username)+' pass: '+str(password))
-    print(f"DEBUG: Username length is {len(user)}")
-    print(f"DEBUG: Password length is {len(pw)}")
-    # 2. Log In
+    # 2. THE LOGIN POST: PythonAnywhere needs these specific fields
     login_data = {
-        'username': username,
-        'password': password,
         'csrfmiddlewaretoken': csrf_token,
-        'login_view-current_step': 'auth'
+        'auth-username': username,
+        'auth-password': password,
+        'login_view-current_step': 'auth' # This is the "magic" field for 2026
     }
+    
+    # We must send the Referer header or it will fail CSRF checks
     r = session.post(login_url, data=login_data, headers={'Referer': login_url})
     
+    # DEBUG: Check if we actually logged in
     if 'Log out' not in r.text:
-        print(f"FAILED: Login failed for {username}. Check your USER_N and PASS_N secrets.")
+        print(f"FAILED: Login failed for {username}.")
+        # To help you debug, let's see what the page said instead
+        if "reCAPTCHA" in r.text:
+            print("REASON: PythonAnywhere is asking for a CAPTCHA. You need to log in manually in a browser once.")
         return False
     
-    # 3. Hit the Extend Button
-    # Note: Referer header is often required by PA to prevent CSRF errors
+    # 3. THE EXTEND POST
     extend_url = f'https://www.pythonanywhere.com/user/{username}/webapp/extend'
-    headers = {'Referer': f'https://www.pythonanywhere.com/user/{username}/webapps/'}
-    r = session.post(extend_url, data={'csrfmiddlewaretoken': csrf_token}, headers=headers)
+    # We need the NEW CSRF token from the logged-in session
+    soup = BeautifulSoup(r.text, 'html.parser')
+    new_csrf = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
+    
+    r = session.post(extend_url, data={'csrfmiddlewaretoken': new_csrf}, headers={'Referer': f'https://www.pythonanywhere.com/user/{username}/webapps/'})
     
     if r.status_code == 200:
-        print(f"SUCCESS: Extended {username} until next month!")
+        print(f"SUCCESS: Extended {username}!")
         return True
     else:
-        print(f"ERROR: Failed to extend {username}. Status: {r.status_code}")
+        print(f"ERROR: Failed to extend. Status: {r.status_code}")
         return False
-
-if __name__ == "__main__":
-    user = os.getenv('PA_USERNAME')
-    pw = os.getenv('PA_PASSWORD')
-    if not user or not pw:
-        print("Missing environment variables PA_USERNAME or PA_PASSWORD")
-        sys.exit(1)
-    
-    success = renew_account(user, pw)
-    if not success:
-        sys.exit(1)
