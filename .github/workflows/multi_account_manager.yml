@@ -30,17 +30,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-
-      - name: Secret Check
+        - name: Hardcoded Secret Test
         run: |
-          if [ -z "$PA_USERNAME" ]; then
-            echo "❌ ERROR: PA_USERNAME is empty for index ${{ matrix.account_index }}"
-            exit 1
+          if [ -n "$TEST_USER" ]; then
+            echo "✅ I can see USER_1 directly!"
           else
-            echo "✅ PA_USERNAME is loaded."
+            echo "❌ I still cannot see USER_1 even when hardcoded."
           fi
-          env:
-          PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+        env:
+          TEST_USER: ${{ secrets.USER_1 }}
 
           # --- TASK 1: AUTO-RENEW (Clean Method) ---
       - name: Auto-Renew Account ${{ matrix.account_index }}
