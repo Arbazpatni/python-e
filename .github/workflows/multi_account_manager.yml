@@ -30,22 +30,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-          # --- TASK 1: AUTO-RENEW (Manual Script Execution) ---
-      - name: Download and Run Renewal Script for Account ${{ matrix.account_index }}
+          # --- TASK 1: AUTO-RENEW (Package Method) ---
+      - name: Auto-Renew Account ${{ matrix.account_index }}
         env:
-          # Inject the secrets into Environment Variables for the Python script
+          # Use the standardized variable names the script expects
           PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           PA_PASSWORD: ${{ secrets[format('PASS_{0}', matrix.account_index)] }}
         run: |
-          # 1. Download the renewal script from the source
-          curl -s -O https://raw.githubusercontent.com/tanishqmudaliar/PythonAnywhere-Auto-Renew/main/renew_python_anywhere.py
-          curl -s -O https://raw.githubusercontent.com/tanishqmudaliar/PythonAnywhere-Auto-Renew/main/requirements.txt
+          # Install the renewal tool directly from GitHub
+          pip install git+https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew.git
           
-          # 2. Install the few libraries it needs (requests, bs4)
-          pip install -r requirements.txt
-          
-          # 3. Run the script
-          python renew_python_anywhere.py
+          # Run the installed module
+          python -m renew_python_anywhere
+
 
       # --- TASK 2: AUTO-DEPLOY ---
       - name: Reload Web App for Account ${{ matrix.account_index }}
