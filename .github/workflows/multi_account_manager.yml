@@ -28,17 +28,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # THIS STEP WAS INDENTED WRONG - FIXED BELOW
-      - name: Hardcoded Secret Test
-        env:
-          TEST_USER: ${{ secrets.USER_1 }}
-        run: |
-          if [ -n "$TEST_USER" ]; then
-            echo "✅ I can see USER_1 directly!"
-          else
-            echo "❌ I still cannot see USER_1 even when hardcoded."
-          fi
-
       # --- TASK 1: AUTO-RENEW ---
       - name: Auto-Renew Account ${{ matrix.account_index }}
         env:
@@ -66,32 +55,24 @@ jobs:
             --data-urlencode "executable=/bin/bash" \
             --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'")
           
-          echo "⏳ Waiting 15s..."
-          sleep 15
-
-          # 3. READ THE LOG (This will show you the real error)
-          echo "📝 GIT OUTPUT FROM SERVER:"
-          curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/files/path/home/$USERNAME/python-e/sync.log"
-          
-
-          echo "⏳ Waiting 15s..."
-          sleep 15
+          echo "⏳ Waiting 7s..."
+          sleep 7
 
           # 4. Reload
           echo "🚀 Reloading..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN"
 
-          # echo "⏳ Waiting 15s..."
-          # sleep 15
+          echo "⏳ Waiting 2s..."
+          sleep 2
 
           # Capture the ID correctly from the response
-          # CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
-          # echo "✅ Console started with ID: $CONSOLE_ID"
+          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
+          echo "✅ Console started with ID: $CONSOLE_ID"
 
           # 5. POST-CLEANUP: Kill the console we just used
-          # if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
-          #   echo "🗑️ Closing console $CONSOLE_ID..."
-          #   curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
-          #     -H "Authorization: Token $TOKEN"
-          # fi
+          if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
+            echo "🗑️ Closing console $CONSOLE_ID..."
+            curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
+              -H "Authorization: Token $TOKEN"
+          fi
