@@ -61,10 +61,10 @@ jobs:
           # 2. Run the Sync and save output to a file
           echo "📥 Forcing Git Sync..."
           # We use > sync.log to capture what happens
-          curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
+          CONSOLE_RESPONSE=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
             --data-urlencode "executable=/bin/bash" \
-            --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'"
+            --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'")
           
           echo "⏳ Waiting 15s..."
           sleep 15
@@ -73,7 +73,25 @@ jobs:
           echo "📝 GIT OUTPUT FROM SERVER:"
           curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/files/path/home/$USERNAME/python-e/sync.log"
           
+
+          echo "⏳ Waiting 15s..."
+          sleep 15
+
           # 4. Reload
           echo "🚀 Reloading..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN"
+
+          # echo "⏳ Waiting 15s..."
+          # sleep 15
+
+          # Capture the ID correctly from the response
+          # CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
+          # echo "✅ Console started with ID: $CONSOLE_ID"
+
+          # 5. POST-CLEANUP: Kill the console we just used
+          # if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
+          #   echo "🗑️ Closing console $CONSOLE_ID..."
+          #   curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
+          #     -H "Authorization: Token $TOKEN"
+          # fi
