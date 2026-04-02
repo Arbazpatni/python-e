@@ -72,6 +72,16 @@ jobs:
           echo "⏳ Waiting 12 seconds for Git to sync files..."
           sleep 12
 
+          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r '.id')
+          echo "✅ Console started with ID: $CONSOLE_ID"
+
+          # 4. KILL the console to free up the slot
+          if [ "$CONSOLE_ID" != "null" ]; then
+            echo "🗑️ Closing console $CONSOLE_ID to free up slots..."
+            curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
+              -H "Authorization: Token $TOKEN"
+          fi
+
           # 4. Reload the web app
           echo "🚀 Reloading $DOMAIN..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
