@@ -1,0 +1,53 @@
+name: N-Account Manager (Renew & Deploy)
+
+on:
+  schedule:
+    - cron: '0 0 1,15 * *'
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # STEP 1: Parse the variable to create the dynamic list
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: echo "matrix=${{ vars.ACCOUNTS_LIST }}" >> $GITHUB_OUTPUT
+
+  # STEP 2: Run for every account in that list
+  manage_accounts:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        account_index: ${{ fromJson(needs.setup.outputs.matrix) }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # --- TASK 1: AUTO-RENEW ---
+      - name: Auto-Renew Account ${{ matrix.account_index }}
+        uses: tanishqmudaliar/PythonAnywhere-Auto-Renew@v1
+        with:
+          username: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+          password: ${{ secrets[format('PASS_{0}', matrix.account_index)] }}
+
+      # --- TASK 2: AUTO-DEPLOY ---
+      - name: Reload Web App for Account ${{ matrix.account_index }}
+        env:
+          USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+          TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
+        run: |
+          if [ -z "$USERNAME" ] || [ -z "$TOKEN" ]; then
+            echo "Secrets for index ${{ matrix.account_index }} not found. Skipping."
+            exit 0
+          fi
+          DOMAIN="${USERNAME}.pythonanywhere.com"
+          echo "Reloading $DOMAIN..."
+          curl -s -X POST "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/$DOMAIN/reload/" \
+            -H "Authorization: Token $TOKEN"
