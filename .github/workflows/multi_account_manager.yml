@@ -47,8 +47,7 @@ jobs:
         run: |
           pip install requests beautifulsoup4
           python renew.py
-
-      # --- TASK 2: AUTO-DEPLOY ---
+          # --- TASK 2: AUTO-DEPLOY (Using v0 API) ---
       - name: Reload Web App for Account ${{ matrix.account_index }}
         env:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
@@ -60,10 +59,10 @@ jobs:
           fi
 
           echo "Fetching Web App list for $USERNAME..."
-          # 1. Get the actual domain name from the API
+          # Fetch using v0
           RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/")
-
-          # 2. Extract the domain (handling potential multiple apps)
+          
+          # Extract the domain (sowmiyancloud3.pythonanywhere.com)
           DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
 
           if [ "$DOMAIN" == "null" ] || [ -z "$DOMAIN" ]; then
@@ -72,6 +71,7 @@ jobs:
           fi
 
           echo "🚀 Reloading $DOMAIN..."
+          # Call the reload endpoint using v0
           RELOAD_CONFIRM=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN")
 
