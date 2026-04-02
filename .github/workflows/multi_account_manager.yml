@@ -61,7 +61,7 @@ jobs:
 
           echo "Fetching Web App list for $USERNAME..."
           # 1. Get the actual domain name from the API
-          RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/")
+          RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/")
 
           # 2. Extract the domain (handling potential multiple apps)
           DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
@@ -72,7 +72,7 @@ jobs:
           fi
 
           echo "🚀 Reloading $DOMAIN..."
-          RELOAD_CONFIRM=$(curl -s -X POST "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/$DOMAIN/reload/" \
+          RELOAD_CONFIRM=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN")
 
           echo "Server Response: $RELOAD_CONFIRM"
