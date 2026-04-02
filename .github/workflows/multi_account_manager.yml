@@ -67,7 +67,7 @@ jobs:
           CONSOLE_RESPONSE=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
             -d "executable=bin/bash" \
-            -d "arguments=-c 'cd $SOURCE_DIR && git pull && echo nice > nice'")
+            -d "arguments=-c 'cd ~/python-e && git pull && echo nice > nice'")
           
           CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r '.id')
           echo "✅ Console started with ID: $CONSOLE_ID"
