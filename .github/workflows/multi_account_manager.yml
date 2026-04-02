@@ -30,19 +30,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-          # --- TASK 1: AUTO-RENEW (Package Method) ---
+          # --- TASK 1: AUTO-RENEW (Clean Method) ---
       - name: Auto-Renew Account ${{ matrix.account_index }}
         env:
-          # Use the standardized variable names the script expects
           PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           PA_PASSWORD: ${{ secrets[format('PASS_{0}', matrix.account_index)] }}
         run: |
-          # Install the renewal tool directly from GitHub
-          pip install git+https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew.git
-          
-          # Run the installed module
-          python -m renew_python_anywhere
-
+          pip install requests beautifulsoup4
+          python renew.py
 
       # --- TASK 2: AUTO-DEPLOY ---
       - name: Reload Web App for Account ${{ matrix.account_index }}
