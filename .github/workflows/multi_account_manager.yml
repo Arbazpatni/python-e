@@ -48,44 +48,32 @@ jobs:
           pip install requests beautifulsoup4
           python renew.py
 
-      - name: Sync, Kill Console, and Reload
+      - name: Sync and Reload with Debug
         env:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
         run: |
-          # 1. Get Webapp Info
+          # 1. Setup
           RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/")
           DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
           SOURCE_DIR=$(echo $RESPONSE | jq -r '.[0].source_directory')
 
-          # 2. PRE-CLEANUP: Kill any lingering consoles to free up the 2 slots
-          echo "🧹 Clearing existing consoles..."
-          CURRENT_CONSOLES=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/")
-          echo $CURRENT_CONSOLES | jq -r '.[].id' | xargs -I {} curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/{}/" -H "Authorization: Token $TOKEN"
-
-          # 3. START NEW CONSOLE: Run the git pull
-          echo "📥 Starting Git Pull..."
-          CONSOLE_RESPONSE=$(curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
+          # 2. Run the Sync and save output to a file
+          echo "📥 Forcing Git Sync..."
+          # We use > sync.log to capture what happens
+          curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/" \
             -H "Authorization: Token $TOKEN" \
             --data-urlencode "executable=bin/bash" \
-            --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git pull'")
+            --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'"
           
-          # Capture the ID correctly from the response
-          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
-          echo "✅ Console started with ID: $CONSOLE_ID"
+          echo "⏳ Waiting 15s..."
+          sleep 15
 
-          # 4. WAIT: Give the pull time to finish
-          echo "⏳ Syncing files (20s)..."
-          sleep 20
-
-          # 5. POST-CLEANUP: Kill the console we just used
-          if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
-            echo "🗑️ Closing console $CONSOLE_ID..."
-            curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
-              -H "Authorization: Token $TOKEN"
-          fi
-
-          # 6. RELOAD: Restart the web server
-          echo "🚀 Restarting Web Server..."
+          # 3. READ THE LOG (This will show you the real error)
+          echo "📝 GIT OUTPUT FROM SERVER:"
+          curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v0/user/$USERNAME/files/path/home/$USERNAME/python-e/sync.log"
+          
+          # 4. Reload
+          echo "🚀 Reloading..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN"
