@@ -30,12 +30,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+
+      - name: Secret Check
+        run: |
+          if [ -z "$PA_USERNAME" ]; then
+            echo "❌ ERROR: PA_USERNAME is empty for index ${{ matrix.account_index }}"
+            exit 1
+          else
+            echo "✅ PA_USERNAME is loaded."
+          fi
+          env:
+          PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+
           # --- TASK 1: AUTO-RENEW (Clean Method) ---
       - name: Auto-Renew Account ${{ matrix.account_index }}
         env:
           # Change 'secrets' to 'vars'
-          PA_USERNAME: ${{ vars[format('USER_{0}', matrix.account_index)] }}
-          PA_PASSWORD: ${{ vars[format('PASS_{0}', matrix.account_index)] }}
+          PA_USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+          PA_PASSWORD: ${{ secrets[format('PASS_{0}', matrix.account_index)] }}
         run: |
           pip install requests beautifulsoup4
           python renew.py
@@ -43,8 +55,8 @@ jobs:
       # --- TASK 2: AUTO-DEPLOY ---
       - name: Reload Web App for Account ${{ matrix.account_index }}
         env:
-          USERNAME: ${{ vars[format('USER_{0}', matrix.account_index)] }}
-          TOKEN: ${{ vars[format('TOKEN_{0}', matrix.account_index)] }}
+          USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
+          TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
         run: |
           if [ -z "$USERNAME" ] || [ -z "$TOKEN" ]; then
             echo "Secrets for index ${{ matrix.account_index }} not found. Skipping."
