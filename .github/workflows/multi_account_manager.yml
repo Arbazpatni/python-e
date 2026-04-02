@@ -53,12 +53,26 @@ jobs:
         env:
           USERNAME: ${{ secrets[format('USER_{0}', matrix.account_index)] }}
           TOKEN: ${{ secrets[format('TOKEN_{0}', matrix.account_index)] }}
-        run: |
-          if [ -z "$USERNAME" ] || [ -z "$TOKEN" ]; then
-            echo "Secrets for index ${{ matrix.account_index }} not found. Skipping."
+        run:
+            if [ -z "$TOKEN" ]; then
+            echo "❌ API Token for index ${{ matrix.account_index }} is missing. Skipping."
             exit 0
           fi
-          DOMAIN="${USERNAME}.pythonanywhere.com"
-          echo "Reloading $DOMAIN..."
-          curl -s -X POST "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/$DOMAIN/reload/" \
-            -H "Authorization: Token $TOKEN"
+
+          echo "Fetching Web App list for $USERNAME..."
+          # 1. Get the actual domain name from the API
+          RESPONSE=$(curl -s -H "Authorization: Token $TOKEN" "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/")
+
+          # 2. Extract the domain (handling potential multiple apps)
+          DOMAIN=$(echo $RESPONSE | jq -r '.[0].domain_name')
+
+          if [ "$DOMAIN" == "null" ] || [ -z "$DOMAIN" ]; then
+            echo "❌ No Web App found for $USERNAME. Response: $RESPONSE"
+            exit 1
+          fi
+
+          echo "🚀 Reloading $DOMAIN..."
+          RELOAD_CONFIRM=$(curl -s -X POST "https://www.pythonanywhere.com/api/v1/user/$USERNAME/webapps/$DOMAIN/reload/" \
+            -H "Authorization: Token $TOKEN")
+
+          echo "Server Response: $RELOAD_CONFIRM"
