@@ -55,24 +55,24 @@ jobs:
             --data-urlencode "executable=/bin/bash" \
             --data-urlencode "arguments=-c 'cd $SOURCE_DIR && git fetch origin main && git reset --hard origin/main > sync.log 2>&1'")
           
-          echo "⏳ Waiting 7s..."
-          sleep 7
+          echo "⏳ Waiting 10s..."
+          sleep 10
 
           # 4. Reload
           echo "🚀 Reloading..."
           curl -s -X POST "https://www.pythonanywhere.com/api/v0/user/$USERNAME/webapps/$DOMAIN/reload/" \
             -H "Authorization: Token $TOKEN"
 
-          echo "⏳ Waiting 2s..."
-          sleep 2
+          # echo "⏳ Waiting 2s..."
+          # sleep 2
 
           # Capture the ID correctly from the response
-          CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
-          echo "✅ Console started with ID: $CONSOLE_ID"
+          # CONSOLE_ID=$(echo $CONSOLE_RESPONSE | jq -r 'if type == "array" then .[0].id else .id end')
+          # echo "✅ Console started with ID: $CONSOLE_ID"
 
-          # 5. POST-CLEANUP: Kill the console we just used
-          if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
-            echo "🗑️ Closing console $CONSOLE_ID..."
-            curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
-              -H "Authorization: Token $TOKEN"
-          fi
+          # # 5. POST-CLEANUP: Kill the console we just used
+          # if [ "$CONSOLE_ID" != "null" ] && [ -n "$CONSOLE_ID" ]; then
+          #   echo "🗑️ Closing console $CONSOLE_ID..."
+          #   curl -s -X DELETE "https://www.pythonanywhere.com/api/v0/user/$USERNAME/consoles/$CONSOLE_ID/" \
+          #     -H "Authorization: Token $TOKEN"
+          # fi
